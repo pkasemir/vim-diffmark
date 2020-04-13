@@ -103,14 +103,14 @@ function! DiffMarkGather(mark_names)
 		call extend(g:diffmarks, {l:md5sum : marks})
 	endif
 endfunction
-function! s:DiffMark(...)
+function! s:DiffMark(mark_args)
 	let diffexpr_save = &diffexpr
 	set diffexpr=DiffMarkImpl()
 	let g:diffmark_force_align = ""
 	let g:diffmarks = {}
 	let mark_names = []
-	if a:0 > 0
-		let mark_names = deepcopy(a:000)
+	if len(a:mark_args) > 0
+		let mark_names = deepcopy(a:mark_args)
 		call filter(mark_names, 'len(v:val) == 1')
 	endif
 	if len(mark_names) == 0
@@ -125,7 +125,67 @@ function! s:DiffMark(...)
 	let &diffexpr = diffexpr_save
 	redraw!
 endfunction
-com! -narg=* DiffMark call s:DiffMark(<f-args>)
+com! -narg=* DiffMark call s:DiffMark([<f-args>])
+
+function! s:DiffSelf(mark_args)
+	let mark_names_real = []
+	let mark_names_diff = []
+
+	let apply_to_real = 1
+	for mark in a:mark_args
+		if len(mark) != 1
+			continue
+		endif
+		if mark == ","
+			let apply_to_real = 0
+			continue
+		endif
+		if apply_to_real
+			call add(mark_names_real, mark)
+		else
+			call add(mark_names_diff, mark)
+		endif
+	endfor
+	if len(mark_names_real) == 0
+		let mark_names_real = ['a', 'b']
+	endif
+	if len(mark_names_diff) == 0
+		let mark_names_diff = ['c', 'd']
+	endif
+	if len(mark_names_real) > len(mark_names_diff)
+		let mark_names_real = mark_names_real[0:len(mark_names_diff) - 1]
+	endif
+	if len(mark_names_diff) > len(mark_names_real)
+		let mark_names_diff = mark_names_diff[0:len(mark_names_real) - 1]
+	endif
+
+	let g:diffmarks = {}
+	diffthis
+	call DiffMarkGather(mark_names_diff)
+
+	let filetype = &ft
+	let lines = getline(1, "$")
+	vnew
+	call append("$", lines)
+	exe "setlocal bt=nofile bh=wipe nobl noswf ro ft=" . filetype
+	exe "file " . expand("#") . ".DiffSelf"
+	let mark_index = 0
+	for marks in values(g:diffmarks)
+		for mark in marks
+			if mark.mark == "EOF"
+				break
+			endif
+			exe "keepjumps normal " . (mark.nr + 1) . "ggm" . mark_names_real[mark_index]
+			let mark_index += 1
+		endfor
+	endfor
+
+
+	diffthis
+	call s:DiffMark(mark_names_real)
+
+endfunction
+com! -narg=* DiffSelf call s:DiffSelf([<f-args>])
 
 func! s:MyRange(r, ...) range
 	echo "MyRange ". a:firstline . " " . a:lastline. " " . a:r
