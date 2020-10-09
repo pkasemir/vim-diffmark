@@ -30,11 +30,11 @@ function! DiffMarkImpl()
 					if mark_in.nr <= last_nr_in
 						break
 					endif
-					if mark_out.nr <= last_nr_out
+					if mark_new.nr <= last_nr_new
 						break
 					endif
 					let last_nr_in = mark_in.nr
-					let last_nr_out = mark_out.nr
+					let last_nr_new = mark_new.nr
 					call add(both_marks, {"in": mark_in, "new": mark_new})
 					break
 				endif
