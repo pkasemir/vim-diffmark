@@ -1,3 +1,15 @@
+function! DiffMarkError(msg)
+	try
+		throw a:msg
+	catch
+		let throwpoint = substitute(v:throwpoint, '\[\(\d\+\)\]\.\.DiffMarkError,.*', ', Line \1', '')
+		echohl ErrorMsg
+		echomsg "DiffMark Error: " . a:msg
+		echohl None
+		echomsg "    From: " . throwpoint
+	endtry
+endfunction
+
 function! DiffMarkCatFile(last_line, line, file)
 	if a:last_line == a:line
 		return "<(echo '')"
@@ -5,13 +17,14 @@ function! DiffMarkCatFile(last_line, line, file)
 		return "<(sed -n '" . a:last_line . "," . (a:line - 1) . "p' " . a:file . "; echo '')"
 	endif
 endfunction
+
 function! DiffMarkImpl()
 	let opt = "-a --binary "
 	if &diffopt =~ "icase"
-	let opt = opt . "-i "
+		let opt = opt . "-i "
 	endif
 	if &diffopt =~ "iwhite"
-	let opt = opt . "-b "
+		let opt = opt . "-b "
 	endif
 
 	let md5sum_in = system("cat ". v:fname_in . " | md5sum")
@@ -79,9 +92,8 @@ function! DiffMarkImpl()
 	else
 		silent execute "!diff " . opt . f_in . " " . f_new . " > " . v:fname_out
 	endif
-
-
 endfunction
+
 function! DiffMarkGather(mark_names)
 	if &diff
 		let marks = []
@@ -103,7 +115,18 @@ function! DiffMarkGather(mark_names)
 		call extend(g:diffmarks, {l:md5sum : marks})
 	endif
 endfunction
+
 function! s:DiffMark(mark_args)
+	let shell_change = &shell !~ "bash$"
+	if shell_change
+		let shell_save = &shell
+		let shell_bash = split(system("which bash 2>/dev/null"))
+		if len(shell_bash) == 0
+			call DiffMarkError("requires bash!")
+			return
+		endif
+		let &shell = shell_bash[0]
+	endif
 	let diffexpr_save = &diffexpr
 	set diffexpr=DiffMarkImpl()
 	let g:diffmark_force_align = ""
@@ -124,6 +147,9 @@ function! s:DiffMark(mark_args)
 	diffupdate
 	let &diffexpr = diffexpr_save
 	redraw!
+	if shell_change
+		let &shell = shell_save
+	endif
 endfunction
 com! -narg=* DiffMark call s:DiffMark([<f-args>])
 
@@ -179,7 +205,6 @@ function! s:DiffSelf(mark_args)
 			let mark_index += 1
 		endfor
 	endfor
-
 
 	diffthis
 	call s:DiffMark(mark_names_real)
