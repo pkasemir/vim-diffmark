@@ -4,10 +4,39 @@ function! DiffMarkError(msg)
 	catch
 		let throwpoint = substitute(v:throwpoint, '\[\(\d\+\)\]\.\.DiffMarkError,.*', ', Line \1', '')
 		echohl ErrorMsg
-		echomsg "DiffMark Error: " . a:msg
+		let error_msg = "DiffMark Error: " . a:msg
+		echomsg error_msg
+		call DiffMarkDebug(error_msg)
 		echohl None
-		echomsg "    From: " . throwpoint
+		let tb_msg = "    From: " . throwpoint
+		echomsg tb_msg
+		call DiffMarkDebug(tb_msg)
 	endtry
+endfunction
+
+function! DiffMarkDebug(msg)
+	if !g:diffmark_debug
+		return
+	endif
+	let my_window = winnr()
+	let debug_buf_name = "-= DiffMark Debug =-"
+	let debug_buf = bufnr(debug_buf_name, 1)
+	let debug_window = bufwinid(debug_buf_name)
+	if debug_window == -1
+		bot 10new
+		if debug_buf == -1
+			exe "setlocal bt=nofile bh=hide noswf ro ft="
+			exe "file " . debug_buf_name
+		else
+			exe "buf " . debug_buf
+		endif
+		exe "match Error /^DiffMark Error:.*/"
+		exe my_window . "wincmd w"
+		let debug_window = bufwinid(debug_buf_name)
+	endif
+	call appendbufline(debug_buf_name, "$", a:msg)
+	call win_execute(debug_window, "normal G")
+
 endfunction
 
 function! DiffMarkCatFile(last_line, line, file)
@@ -131,6 +160,7 @@ function! s:DiffMark(mark_args)
 	set diffexpr=DiffMarkImpl()
 	let g:diffmark_force_align = ""
 	let g:diffmarks = {}
+	let g:diffmark_debug = 0
 	let mark_names = []
 	if len(a:mark_args) > 0
 		let mark_names = deepcopy(a:mark_args)
