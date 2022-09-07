@@ -41,9 +41,9 @@ endfunction
 
 function! DiffMarkCatFile(last_line, line, file)
 	if a:last_line == a:line
-		return "<(echo '')"
+		return "<(printf '')"
 	else
-		return "<(sed -n '" . a:last_line . "," . (a:line - 1) . "p' " . a:file . "; echo '')"
+		return "<(sed -n '" . a:last_line . "," . (a:line - 1) . "p' " . a:file . ")"
 	endif
 endfunction
 
@@ -84,7 +84,7 @@ function! DiffMarkImpl()
 		endfor
 		let last_nr_in = 0
 		let last_nr_new = 0
-		silent execute "!echo '' > " . v:fname_out
+		silent execute "!printf '' > " . v:fname_out
 		for marks in both_marks
 			let linenr_in = marks.in.nr
 			let linenr_new = marks.new.nr
