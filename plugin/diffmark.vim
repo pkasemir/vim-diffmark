@@ -56,8 +56,8 @@ function! DiffMarkImpl()
 		let opt = opt . "-b "
 	endif
 
-	let md5sum_in = system("cat ". v:fname_in . " | md5sum")
-	let md5sum_new = system("cat ". v:fname_new . " | md5sum")
+	let md5sum_in = system("cat ". v:fname_in . " | tr -d '\r' | md5sum")
+	let md5sum_new = system("cat ". v:fname_new . " | tr -d '\r' | md5sum")
 	let f_in = v:fname_in
 	let f_new = v:fname_new
 	let marks_in = get(g:diffmarks, md5sum_in, [])
@@ -139,7 +139,7 @@ function! DiffMarkGather(mark_names)
 		call add(marks, {"mark": "EOF", "nr": line('$') + 1, "line": ""})
 		let tmp = tempname()
 		execute "write! " . tmp
-		let md5sum = system("cat ". tmp . " | md5sum")
+		let md5sum = system("cat ". tmp . " | tr -d '\r' | md5sum")
 		call delete(tmp)
 		call extend(g:diffmarks, {l:md5sum : marks})
 	endif
